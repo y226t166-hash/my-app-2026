@@ -322,17 +322,21 @@ function buyEmployee(id) {
 // 自動生成
 function autoResourceGen() {
     let changed = false;
-    if (state.employees.miner > 0) {
+    if (state.employees && state.employees.miner > 0) {
         state.resources.iron += state.employees.miner;
         changed = true;
     }
-    if (state.employees.lumberjack > 0) {
+    if (state.employees && state.employees.lumberjack > 0) {
         state.resources.wood += state.employees.lumberjack;
         changed = true;
     }
-    if (state.employees.manaSearcher > 0) {
-        if (Date.now() % 5000 < 1000) {
+    if (state.employees && state.employees.manaSearcher > 0) {
+        // 5秒ごとに実行するためのカウンター管理（stateに保存しない簡易版）
+        if (!window._manaCounter) window._manaCounter = 0;
+        window._manaCounter++;
+        if (window._manaCounter >= 5) {
             state.resources.mana += state.employees.manaSearcher;
+            window._manaCounter = 0;
             changed = true;
         }
     }
@@ -341,13 +345,22 @@ function autoResourceGen() {
 
 // 保存
 function saveGame() {
-    localStorage.setItem('arcaneForgeSave_Clicker', JSON.stringify(state));
+    localStorage.setItem('arcaneForgeSave_Clicker_v2', JSON.stringify(state));
 }
 
 function loadGame() {
-    const saved = localStorage.getItem('arcaneForgeSave_Clicker');
+    const saved = localStorage.getItem('arcaneForgeSave_Clicker_v2');
     if (saved) {
-        state = JSON.parse(saved);
+        const loadedState = JSON.parse(saved);
+        // 新しい構造（employeesなど）が不足している場合の補完
+        state = {
+            ...state,
+            ...loadedState,
+            resources: { ...state.resources, ...loadedState.resources },
+            employees: { ...state.employees, ...loadedState.employees },
+            inventory: loadedState.inventory || [],
+            stats: { ...state.stats, ...loadedState.stats }
+        };
         state.isCrafting = false;
     }
 }
