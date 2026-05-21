@@ -48,6 +48,37 @@ const elements = {
     craftingMsg: document.getElementById('crafting-msg'),
     progressBar: document.getElementById('crafting-progress-inner')
 };
+// オーディオ管理
+const audio = {
+    ctx: null,
+    init() {
+        if (!this.ctx) {
+            this.ctx = new (window.AudioContext || window.webkitAudioContext)();
+        }
+    },
+    play(freq, type, duration, vol = 0.1) {
+        this.init();
+        const osc = this.ctx.createOscillator();
+        const gain = this.ctx.createGain();
+        osc.type = type;
+        osc.frequency.setValueAtTime(freq, this.ctx.currentTime);
+        gain.gain.setValueAtTime(vol, this.ctx.currentTime);
+        gain.gain.exponentialRampToValueAtTime(0.0001, this.ctx.currentTime + duration);
+        osc.connect(gain);
+        gain.connect(this.ctx.destination);
+        osc.start();
+        osc.stop(this.ctx.currentTime + duration);
+    },
+    click() { this.play(440, 'sine', 0.1); },
+    collect() { this.play(880, 'triangle', 0.1, 0.05); },
+    craft() { this.play(220, 'sawtooth', 0.3, 0.05); },
+    finish() { 
+        this.play(660, 'sine', 0.2);
+        setTimeout(() => this.play(880, 'sine', 0.4), 100);
+    },
+    sell() { this.play(1200, 'sine', 0.1, 0.05); },
+    buy() { this.play(523.25, 'square', 0.2, 0.03); }
+};
 
 // 初期化
 function init() {
@@ -58,10 +89,10 @@ function init() {
     renderInventory();
     renderUpgrades();
     updateUI();
-    
+
     // 自動生成の開始
     setInterval(autoResourceGen, 1000);
-    
+
     addLog("鍛冶場が稼働を開始しました。");
 }
 
@@ -69,7 +100,10 @@ function init() {
 function setupTabs() {
     document.querySelectorAll('.nav-btn').forEach(btn => {
         btn.addEventListener('click', () => {
+            audio.click();
             const tabId = btn.getAttribute('data-tab');
+// ... rest of code
+
             document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
             btn.classList.add('active');
             document.querySelectorAll('.tab-content').forEach(content => content.classList.remove('active'));
@@ -86,6 +120,7 @@ function setupGathering() {
 }
 
 function collect(resource, amount, msg) {
+    audio.collect();
     state.resources[resource] += amount;
     const el = elements[resource];
     el.classList.remove('pulse');
@@ -162,6 +197,7 @@ function renderRecipes() {
 
 function startCrafting(recipe) {
     if (state.isCrafting || !canCraft(recipe)) return;
+    audio.craft();
     for (const [res, amt] of Object.entries(recipe.reqs)) {
         state.resources[res] -= amt;
     }
@@ -185,6 +221,7 @@ function startCrafting(recipe) {
 }
 
 function finishCrafting(recipe) {
+    audio.finish();
     state.isCrafting = false;
     elements.craftingStatus.classList.add('hidden');
     elements.progressBar.style.width = '0%';
@@ -233,6 +270,7 @@ function renderInventory() {
 function sellWeapon(id) {
     const index = state.inventory.findIndex(w => w.id === id);
     if (index !== -1) {
+        audio.sell();
         const weapon = state.inventory[index];
         state.resources.gold += weapon.value;
         state.inventory.splice(index, 1);
@@ -271,6 +309,7 @@ function renderUpgrades() {
 function buyUpgrade(id) {
     const cost = getUpgradeCost(id);
     if (state.resources.gold >= cost) {
+        audio.buy();
         state.resources.gold -= cost;
         state.upgrades[id] = (state.upgrades[id] || 0) + 1;
         addLog(`${upgradeData.find(u => u.id === id).name}を強化しました。`);
