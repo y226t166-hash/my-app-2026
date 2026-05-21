@@ -3,7 +3,7 @@
 『The Arcane Forge』は、ブラウザで遊べるダークファンタジー武器作りゲームです。
 あなたは鍛冶師となり、リソースを収集し、伝説の武器を鍛え上げます。
 
-**プロジェクトURL:** [https://github.com/y226t166-hash/my-app-2026](https://github.com/y226t166-hash/my-app-2026)
+**プロジェクトURL:** [https://y226t166-hash.github.io/my-app-2026/](https://y226t166-hash.github.io/my-app-2026/)
 
 ---
 
