@@ -27,6 +27,9 @@
 ### 4. セーブデータについて
 ブラウザの `localStorage` を使用して自動保存されます。ブラウザを閉じてもデータは保持されます。
 
+### 5. 参考資料
+- **アセットURL:** [blob:https://gemini.google.com/d9c49be8-87ad-4385-b7e7-4636ff8cfd33](blob:https://gemini.google.com/d9c49be8-87ad-4385-b7e7-4636ff8cfd33)
+
 ---
 
 ## 🚀 開発と実行
