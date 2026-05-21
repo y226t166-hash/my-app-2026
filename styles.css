@@ -17,7 +17,7 @@
     box-sizing: border-box;
     margin: 0;
     padding: 0;
-    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    font-family: 'Helvetica Neue', Arial, 'Hiragino Kaku Gothic ProN', 'Hiragino Sans', Meiryo, sans-serif;
 }
 
 body {
@@ -139,13 +139,26 @@ main {
     background: linear-gradient(145deg, #222, #111);
     border: 2px solid var(--border-color);
     color: var(--text-color);
-    padding: 40px 20px;
+    padding: 20px;
     border-radius: 12px;
     cursor: pointer;
-    font-size: 1.2rem;
     transition: all 0.2s;
     position: relative;
     overflow: hidden;
+    text-align: center;
+}
+
+.btn-title {
+    display: block;
+    font-weight: bold;
+    font-size: 1.4rem;
+    margin-bottom: 5px;
+}
+
+.btn-desc {
+    display: block;
+    font-size: 0.8rem;
+    opacity: 0.7;
 }
 
 .action-btn:hover {
@@ -186,6 +199,7 @@ main {
     border-color: var(--accent-color);
 }
 
+/* Forge Tab */
 .recipe-list {
     display: flex;
     flex-direction: column;
@@ -243,6 +257,48 @@ main {
     background: linear-gradient(90deg, var(--accent-color), #ffdb00);
     box-shadow: 0 0 10px var(--accent-glow);
     transition: width 0.1s linear;
+}
+
+/* Upgrade Tab */
+.upgrade-list {
+    display: flex;
+    flex-direction: column;
+    gap: 15px;
+}
+
+.upgrade-card {
+    background: rgba(0,0,0,0.3);
+    padding: 15px;
+    border-radius: 8px;
+    border-left: 4px solid var(--mana-color);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.upgrade-info h3 {
+    margin-bottom: 5px;
+    color: var(--mana-color);
+}
+
+.upgrade-desc {
+    font-size: 0.8rem;
+    color: #aaa;
+}
+
+.buy-btn {
+    background: var(--mana-color);
+    border: none;
+    color: black;
+    padding: 8px 16px;
+    border-radius: 4px;
+    font-weight: bold;
+    cursor: pointer;
+}
+
+.buy-btn:disabled {
+    background: #444;
+    cursor: not-allowed;
 }
 
 /* Inventory */

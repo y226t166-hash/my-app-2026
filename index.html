@@ -1,41 +1,51 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="ja">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>The Arcane Forge</title>
+    <title>神秘の鍛冶場 - クリッカーゲーム</title>
     <link rel="stylesheet" href="styles.css">
 </head>
 <body>
     <div id="app">
         <header>
-            <h1>The Arcane Forge</h1>
+            <h1>神秘の鍛冶場</h1>
             <div id="resources" class="resource-bar">
-                <div class="resource" title="Gold"><span class="icon">💰</span> <span id="gold-count">0</span></div>
-                <div class="resource" title="Iron"><span class="icon">⛓️</span> <span id="iron-count">0</span></div>
-                <div class="resource" title="Wood"><span class="icon">🪵</span> <span id="wood-count">0</span></div>
-                <div class="resource" title="Mana Crystal"><span class="icon">💎</span> <span id="mana-count">0</span></div>
+                <div class="resource" title="所持金"><span class="icon">💰</span> <span id="gold-count">0</span> G</div>
+                <div class="resource" title="鉄の塊"><span class="icon">⛓️</span> <span id="iron-count">0</span></div>
+                <div class="resource" title="原木"><span class="icon">🪵</span> <span id="wood-count">0</span></div>
+                <div class="resource" title="魔力の結晶"><span class="icon">💎</span> <span id="mana-count">0</span></div>
             </div>
         </header>
 
         <nav>
-            <button class="nav-btn active" data-tab="gather">Gather</button>
-            <button class="nav-btn" data-tab="forge">Forge</button>
-            <button class="nav-btn" data-tab="inventory">Inventory</button>
+            <button class="nav-btn active" data-tab="gather">収集</button>
+            <button class="nav-btn" data-tab="forge">鍛造</button>
+            <button class="nav-btn" data-tab="inventory">倉庫</button>
+            <button class="nav-btn" data-tab="upgrades">強化</button>
         </nav>
 
         <main>
             <section id="gather" class="tab-content active">
                 <div class="gather-zone">
-                    <button id="mine-iron" class="action-btn">Mine Iron</button>
-                    <button id="chop-wood" class="action-btn">Chop Wood</button>
-                    <button id="search-mana" class="action-btn">Search Mana</button>
+                    <button id="mine-iron" class="action-btn">
+                        <span class="btn-title">採掘する</span>
+                        <span class="btn-desc">鉄を獲得</span>
+                    </button>
+                    <button id="chop-wood" class="action-btn">
+                        <span class="btn-title">伐採する</span>
+                        <span class="btn-desc">木材を獲得</span>
+                    </button>
+                    <button id="search-mana" class="action-btn">
+                        <span class="btn-title">探索する</span>
+                        <span class="btn-desc">マナを獲得</span>
+                    </button>
                 </div>
             </section>
 
             <section id="forge" class="tab-content">
                 <div class="recipe-list" id="recipe-list">
-                    <!-- Recipes will be injected here -->
+                    <!-- レシピがここに挿入されます -->
                 </div>
                 <div id="crafting-status" class="hidden">
                     <p id="crafting-msg"></p>
@@ -47,14 +57,20 @@
 
             <section id="inventory" class="tab-content">
                 <div class="inventory-grid" id="inventory-grid">
-                    <!-- Weapons will be injected here -->
+                    <!-- 武器がここに挿入されます -->
+                </div>
+            </section>
+
+            <section id="upgrades" class="tab-content">
+                <div class="upgrade-list" id="upgrade-list">
+                    <!-- 強化項目がここに挿入されます -->
                 </div>
             </section>
         </main>
 
         <footer>
             <div id="log" class="game-log">
-                <p>Welcome to the Arcane Forge. Start by gathering resources!</p>
+                <p>神秘の鍛冶場へようこそ。まずは材料を集めましょう。</p>
             </div>
         </footer>
     </div>

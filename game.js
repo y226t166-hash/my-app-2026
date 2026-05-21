@@ -1,10 +1,16 @@
-// Game State
+// ゲームの状態
 let state = {
     resources: {
         gold: 10,
         iron: 0,
         wood: 0,
         mana: 0
+    },
+    upgrades: {
+        clickPower: 1,
+        autoMiner: 0,
+        autoLumberjack: 0,
+        autoManaSearcher: 0
     },
     inventory: [],
     isCrafting: false,
@@ -14,14 +20,21 @@ let state = {
 };
 
 const recipes = [
-    { id: 'iron-dagger', name: 'Iron Dagger', reqs: { iron: 5, wood: 2 }, time: 3000, basePower: 10, rarity: 'common' },
-    { id: 'longsword', name: 'Longsword', reqs: { iron: 15, wood: 5 }, time: 8000, basePower: 25, rarity: 'common' },
-    { id: 'battle-axe', name: 'Battle Axe', reqs: { iron: 20, wood: 10 }, time: 12000, basePower: 40, rarity: 'rare' },
-    { id: 'mana-staff', name: 'Mana Staff', reqs: { wood: 15, mana: 5 }, time: 15000, basePower: 35, rarity: 'rare' },
-    { id: 'excalibur', name: 'Excalibur', reqs: { iron: 50, mana: 20, gold: 100 }, time: 30000, basePower: 100, rarity: 'legendary' }
+    { id: 'iron-dagger', name: '鉄の短剣', reqs: { iron: 5, wood: 2 }, time: 3000, basePower: 10, rarity: 'common' },
+    { id: 'longsword', name: 'ロングソード', reqs: { iron: 15, wood: 5 }, time: 8000, basePower: 25, rarity: 'common' },
+    { id: 'battle-axe', name: 'バトルアックス', reqs: { iron: 20, wood: 10 }, time: 12000, basePower: 40, rarity: 'rare' },
+    { id: 'mana-staff', name: '魔力の杖', reqs: { wood: 15, mana: 5 }, time: 15000, basePower: 35, rarity: 'rare' },
+    { id: 'excalibur', name: 'エクスカリバー', reqs: { iron: 50, mana: 20, gold: 100 }, time: 30000, basePower: 100, rarity: 'legendary' }
 ];
 
-// DOM Elements
+const upgradeData = [
+    { id: 'clickPower', name: '鍛冶屋の腕力', desc: 'クリック時の獲得リソース+1', baseCost: 50, factor: 1.5, type: 'click' },
+    { id: 'autoMiner', name: '自動採掘機', desc: '1秒ごとに鉄+1', baseCost: 100, factor: 1.6, type: 'auto', resource: 'iron' },
+    { id: 'autoLumberjack', name: '自動伐採機', desc: '1秒ごとに木材+1', baseCost: 150, factor: 1.7, type: 'auto', resource: 'wood' },
+    { id: 'autoManaSearcher', name: '魔力探知機', desc: '5秒ごとにマナ+1', baseCost: 500, factor: 2.0, type: 'auto', resource: 'mana', interval: 5000 }
+];
+
+// DOM要素
 const elements = {
     gold: document.getElementById('gold-count'),
     iron: document.getElementById('iron-count'),
@@ -29,75 +42,81 @@ const elements = {
     mana: document.getElementById('mana-count'),
     recipeList: document.getElementById('recipe-list'),
     inventoryGrid: document.getElementById('inventory-grid'),
+    upgradeList: document.getElementById('upgrade-list'),
     log: document.getElementById('log'),
     craftingStatus: document.getElementById('crafting-status'),
     craftingMsg: document.getElementById('crafting-msg'),
     progressBar: document.getElementById('crafting-progress-inner')
 };
 
-// Initialize
+// 初期化
 function init() {
     loadGame();
     setupTabs();
     setupGathering();
     renderRecipes();
     renderInventory();
+    renderUpgrades();
     updateUI();
-    addLog("Forge initialized. Materials are waiting.");
+    
+    // 自動生成の開始
+    setInterval(autoResourceGen, 1000);
+    
+    addLog("鍛冶場が稼働を開始しました。");
 }
 
-// Tab Management
+// タブ管理
 function setupTabs() {
     document.querySelectorAll('.nav-btn').forEach(btn => {
         btn.addEventListener('click', () => {
             const tabId = btn.getAttribute('data-tab');
-            
-            // Update buttons
             document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
             btn.classList.add('active');
-            
-            // Update content
-            document.querySelectorAll('.tab-content').forEach(content => {
-                content.classList.remove('active');
-            });
+            document.querySelectorAll('.tab-content').forEach(content => content.classList.remove('active'));
             document.getElementById(tabId).classList.add('active');
         });
     });
 }
 
-// Resource Gathering
+// リソース収集
 function setupGathering() {
-    document.getElementById('mine-iron').addEventListener('click', () => collect('iron', 1, "Mined 1 Iron."));
-    document.getElementById('chop-wood').addEventListener('click', () => collect('wood', 1, "Chopped 1 Wood."));
-    document.getElementById('search-mana').addEventListener('click', () => collect('mana', 1, "Found 1 Mana Crystal."));
+    document.getElementById('mine-iron').addEventListener('click', () => collect('iron', state.upgrades.clickPower, `鉄を${state.upgrades.clickPower}個獲得しました。`));
+    document.getElementById('chop-wood').addEventListener('click', () => collect('wood', state.upgrades.clickPower, `木材を${state.upgrades.clickPower}個獲得しました。`));
+    document.getElementById('search-mana').addEventListener('click', () => collect('mana', state.upgrades.clickPower, `マナを${state.upgrades.clickPower}個獲得しました。`));
 }
 
 function collect(resource, amount, msg) {
     state.resources[resource] += amount;
-    
-    // Pulse animation
     const el = elements[resource];
     el.classList.remove('pulse');
-    void el.offsetWidth; // trigger reflow
+    void el.offsetWidth;
     el.classList.add('pulse');
-
     updateUI();
-    addLog(msg);
+    if (msg) addLog(msg);
     saveGame();
 }
 
-// UI Updates
+// UI更新
 function updateUI() {
-    elements.gold.innerText = state.resources.gold;
+    elements.gold.innerText = Math.floor(state.resources.gold);
     elements.iron.innerText = state.resources.iron;
     elements.wood.innerText = state.resources.wood;
     elements.mana.innerText = state.resources.mana;
     
-    // Update craft button states
+    // 鍛造ボタンの状態更新
     document.querySelectorAll('.craft-btn').forEach(btn => {
         const recipeId = btn.getAttribute('data-recipe');
         const recipe = recipes.find(r => r.id === recipeId);
         btn.disabled = !canCraft(recipe) || state.isCrafting;
+    });
+
+    // アップグレードボタンの状態更新
+    document.querySelectorAll('.buy-btn').forEach(btn => {
+        const upId = btn.getAttribute('data-upgrade');
+        const up = upgradeData.find(u => u.id === upId);
+        const cost = getUpgradeCost(upId);
+        btn.innerText = `購入 (${Math.floor(cost)} G)`;
+        btn.disabled = state.resources.gold < cost;
     });
 }
 
@@ -110,7 +129,7 @@ function addLog(msg) {
     }
 }
 
-// Crafting Logic
+// 鍛造ロジック
 function canCraft(recipe) {
     for (const [res, amt] of Object.entries(recipe.reqs)) {
         if (state.resources[res] < amt) return false;
@@ -123,19 +142,19 @@ function renderRecipes() {
     recipes.forEach(recipe => {
         const card = document.createElement('div');
         card.className = 'recipe-card';
-        
         let reqsText = Object.entries(recipe.reqs)
-            .map(([res, amt]) => `${amt} ${res.charAt(0).toUpperCase() + res.slice(1)}`)
+            .map(([res, amt]) => {
+                let name = res === 'gold' ? 'ゴールド' : res === 'iron' ? '鉄' : res === 'wood' ? '木材' : 'マナ';
+                return `${amt} ${name}`;
+            })
             .join(', ');
-            
         card.innerHTML = `
             <div class="recipe-info">
                 <h3>${recipe.name}</h3>
-                <p class="recipe-reqs">Requires: ${reqsText}</p>
+                <p class="recipe-reqs">必要: ${reqsText}</p>
             </div>
-            <button class="craft-btn" data-recipe="${recipe.id}">Forge</button>
+            <button class="craft-btn" data-recipe="${recipe.id}">鍛造</button>
         `;
-        
         card.querySelector('.craft-btn').addEventListener('click', () => startCrafting(recipe));
         elements.recipeList.appendChild(card);
     });
@@ -143,26 +162,19 @@ function renderRecipes() {
 
 function startCrafting(recipe) {
     if (state.isCrafting || !canCraft(recipe)) return;
-    
-    // Consume resources
     for (const [res, amt] of Object.entries(recipe.reqs)) {
         state.resources[res] -= amt;
     }
-    
     state.isCrafting = true;
     updateUI();
-    
     elements.craftingStatus.classList.remove('hidden');
-    elements.craftingMsg.innerText = `Forging ${recipe.name}...`;
-    
+    elements.craftingMsg.innerText = `${recipe.name}を鍛造中...`;
     let start = null;
     function animate(timestamp) {
         if (!start) start = timestamp;
         let progress = timestamp - start;
         let percent = Math.min((progress / recipe.time) * 100, 100);
-        
         elements.progressBar.style.width = percent + '%';
-        
         if (progress < recipe.time) {
             requestAnimationFrame(animate);
         } else {
@@ -176,36 +188,32 @@ function finishCrafting(recipe) {
     state.isCrafting = false;
     elements.craftingStatus.classList.add('hidden');
     elements.progressBar.style.width = '0%';
-    
-    // Randomize stats
-    const variance = Math.floor(Math.random() * 11) - 5; // -5 to +5
+    const variance = Math.floor(Math.random() * 11) - 5;
     const finalPower = recipe.basePower + variance;
-    
-    // Determine Rarity
     let rarity = recipe.rarity;
     const roll = Math.random();
     if (roll > 0.95) rarity = 'legendary';
     else if (roll > 0.85) rarity = 'epic';
     else if (roll > 0.70 && rarity === 'common') rarity = 'rare';
 
+    const rarityJp = { common: '一般', rare: '希少', epic: '逸品', legendary: '伝説' };
     const weapon = {
         id: Date.now(),
         name: recipe.name,
         power: finalPower,
         rarity: rarity,
+        rarityName: rarityJp[rarity],
         value: Math.floor(finalPower * 1.5)
     };
-    
     state.inventory.push(weapon);
     state.stats.totalCrafted++;
-    
-    addLog(`Successfully forged ${weapon.rarity.toUpperCase()} ${weapon.name}! (Power: ${weapon.power})`);
+    addLog(`「${weapon.rarityName}の${weapon.name}」を鍛え上げました！（威力: ${weapon.power}）`);
     renderInventory();
     updateUI();
     saveGame();
 }
 
-// Inventory Logic
+// インベントリロジック
 function renderInventory() {
     elements.inventoryGrid.innerHTML = '';
     state.inventory.slice().reverse().forEach(weapon => {
@@ -213,11 +221,10 @@ function renderInventory() {
         card.className = `weapon-card ${weapon.rarity}`;
         card.innerHTML = `
             <div class="weapon-name">${weapon.name}</div>
-            <div class="weapon-power">Power: ${weapon.power}</div>
-            <div class="weapon-rarity" style="font-size: 0.7rem; color: var(--rarity-${weapon.rarity})">${weapon.rarity.toUpperCase()}</div>
-            <button class="sell-btn" style="margin-top: 5px; font-size: 0.7rem; cursor: pointer;">Sell (${weapon.value}g)</button>
+            <div class="weapon-power">威力: ${weapon.power}</div>
+            <div class="weapon-rarity" style="font-size: 0.7rem; color: var(--rarity-${weapon.rarity})">${weapon.rarityName}</div>
+            <button class="sell-btn">売却 (${weapon.value} G)</button>
         `;
-        
         card.querySelector('.sell-btn').addEventListener('click', () => sellWeapon(weapon.id));
         elements.inventoryGrid.appendChild(card);
     });
@@ -229,23 +236,80 @@ function sellWeapon(id) {
         const weapon = state.inventory[index];
         state.resources.gold += weapon.value;
         state.inventory.splice(index, 1);
-        addLog(`Sold ${weapon.name} for ${weapon.value} Gold.`);
+        addLog(`「${weapon.name}」を売却して ${weapon.value} G 獲得しました。`);
         renderInventory();
         updateUI();
         saveGame();
     }
 }
 
-// Persistence
+// 強化ロジック
+function getUpgradeCost(id) {
+    const up = upgradeData.find(u => u.id === id);
+    const level = state.upgrades[id] || 0;
+    return up.baseCost * Math.pow(up.factor, level);
+}
+
+function renderUpgrades() {
+    elements.upgradeList.innerHTML = '';
+    upgradeData.forEach(up => {
+        const card = document.createElement('div');
+        card.className = 'upgrade-card';
+        const level = state.upgrades[up.id] || 0;
+        card.innerHTML = `
+            <div class="upgrade-info">
+                <h3>${up.name} (Lv.${level})</h3>
+                <p class="upgrade-desc">${up.desc}</p>
+            </div>
+            <button class="buy-btn" data-upgrade="${up.id}">購入</button>
+        `;
+        card.querySelector('.buy-btn').addEventListener('click', () => buyUpgrade(up.id));
+        elements.upgradeList.appendChild(card);
+    });
+}
+
+function buyUpgrade(id) {
+    const cost = getUpgradeCost(id);
+    if (state.resources.gold >= cost) {
+        state.resources.gold -= cost;
+        state.upgrades[id] = (state.upgrades[id] || 0) + 1;
+        addLog(`${upgradeData.find(u => u.id === id).name}を強化しました。`);
+        renderUpgrades();
+        updateUI();
+        saveGame();
+    }
+}
+
+// 自動生成
+function autoResourceGen() {
+    let changed = false;
+    if (state.upgrades.autoMiner > 0) {
+        state.resources.iron += state.upgrades.autoMiner;
+        changed = true;
+    }
+    if (state.upgrades.autoLumberjack > 0) {
+        state.resources.wood += state.upgrades.autoLumberjack;
+        changed = true;
+    }
+    // マナは確率、または5秒に1回などの調整が必要だが、一旦簡易的に
+    if (state.upgrades.autoManaSearcher > 0) {
+        if (Date.now() % 5000 < 1000) { // 簡易的な5秒判定
+            state.resources.mana += state.upgrades.autoManaSearcher;
+            changed = true;
+        }
+    }
+    if (changed) updateUI();
+}
+
+// 保存
 function saveGame() {
-    localStorage.setItem('arcaneForgeSave', JSON.stringify(state));
+    localStorage.setItem('arcaneForgeSave_Clicker', JSON.stringify(state));
 }
 
 function loadGame() {
-    const saved = localStorage.getItem('arcaneForgeSave');
+    const saved = localStorage.getItem('arcaneForgeSave_Clicker');
     if (saved) {
         state = JSON.parse(saved);
-        // Reset crafting state on load just in case
         state.isCrafting = false;
     }
 }
