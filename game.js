@@ -6,11 +6,11 @@ let state = {
         wood: 0,
         mana: 0
     },
-    upgrades: {
-        clickPower: 1,
-        autoMiner: 0,
-        autoLumberjack: 0,
-        autoManaSearcher: 0
+    employees: {
+        training: 1,
+        miner: 0,
+        lumberjack: 0,
+        manaSearcher: 0
     },
     inventory: [],
     isCrafting: false,
@@ -27,11 +27,11 @@ const recipes = [
     { id: 'excalibur', name: 'エクスカリバー', reqs: { iron: 50, mana: 20, gold: 100 }, time: 30000, basePower: 100, rarity: 'legendary' }
 ];
 
-const upgradeData = [
-    { id: 'clickPower', name: '鍛冶屋の腕力', desc: 'クリック時の獲得リソース+1', baseCost: 50, factor: 1.5, type: 'click' },
-    { id: 'autoMiner', name: '自動採掘機', desc: '1秒ごとに鉄+1', baseCost: 100, factor: 1.6, type: 'auto', resource: 'iron' },
-    { id: 'autoLumberjack', name: '自動伐採機', desc: '1秒ごとに木材+1', baseCost: 150, factor: 1.7, type: 'auto', resource: 'wood' },
-    { id: 'autoManaSearcher', name: '魔力探知機', desc: '5秒ごとにマナ+1', baseCost: 500, factor: 2.0, type: 'auto', resource: 'mana', interval: 5000 }
+const employeeData = [
+    { id: 'training', name: '技術研修', desc: '店主（自分）の腕を磨き、クリック時の獲得量を増やします。', baseCost: 50, factor: 1.5, type: 'click' },
+    { id: 'miner', name: '見習い採掘師', desc: '地下室で鉄を掘り続けます（1秒ごとに鉄+1）。', baseCost: 100, factor: 1.6, type: 'auto', resource: 'iron' },
+    { id: 'lumberjack', name: '木こりの協力者', desc: '裏山で木材を調達してくれます（1秒ごとに木材+1）。', baseCost: 150, factor: 1.7, type: 'auto', resource: 'wood' },
+    { id: 'manaSearcher', name: '魔力探求者', desc: '神秘の森でマナを探してくれます（5秒ごとにマナ+1）。', baseCost: 500, factor: 2.0, type: 'auto', resource: 'mana', interval: 5000 }
 ];
 
 // DOM要素
@@ -42,7 +42,7 @@ const elements = {
     mana: document.getElementById('mana-count'),
     recipeList: document.getElementById('recipe-list'),
     inventoryGrid: document.getElementById('inventory-grid'),
-    upgradeList: document.getElementById('upgrade-list'),
+    employeeList: document.getElementById('employee-list'),
     log: document.getElementById('log'),
     craftingStatus: document.getElementById('crafting-status'),
     craftingMsg: document.getElementById('crafting-msg'),
@@ -87,12 +87,12 @@ function init() {
     setupGathering();
     renderRecipes();
     renderInventory();
-    renderUpgrades();
+    renderEmployees();
     updateUI();
-
+    
     // 自動生成の開始
     setInterval(autoResourceGen, 1000);
-
+    
     addLog("鍛冶場が稼働を開始しました。");
 }
 
@@ -102,8 +102,6 @@ function setupTabs() {
         btn.addEventListener('click', () => {
             audio.click();
             const tabId = btn.getAttribute('data-tab');
-// ... rest of code
-
             document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
             btn.classList.add('active');
             document.querySelectorAll('.tab-content').forEach(content => content.classList.remove('active'));
@@ -114,9 +112,9 @@ function setupTabs() {
 
 // リソース収集
 function setupGathering() {
-    document.getElementById('mine-iron').addEventListener('click', () => collect('iron', state.upgrades.clickPower, `鉄を${state.upgrades.clickPower}個獲得しました。`));
-    document.getElementById('chop-wood').addEventListener('click', () => collect('wood', state.upgrades.clickPower, `木材を${state.upgrades.clickPower}個獲得しました。`));
-    document.getElementById('search-mana').addEventListener('click', () => collect('mana', state.upgrades.clickPower, `マナを${state.upgrades.clickPower}個獲得しました。`));
+    document.getElementById('mine-iron').addEventListener('click', () => collect('iron', state.employees.training, `鉄を${state.employees.training}個獲得しました。`));
+    document.getElementById('chop-wood').addEventListener('click', () => collect('wood', state.employees.training, `木材を${state.employees.training}個獲得しました。`));
+    document.getElementById('search-mana').addEventListener('click', () => collect('mana', state.employees.training, `マナを${state.employees.training}個獲得しました。`));
 }
 
 function collect(resource, amount, msg) {
@@ -145,12 +143,12 @@ function updateUI() {
         btn.disabled = !canCraft(recipe) || state.isCrafting;
     });
 
-    // アップグレードボタンの状態更新
+    // 雇用ボタンの状態更新
     document.querySelectorAll('.buy-btn').forEach(btn => {
         const upId = btn.getAttribute('data-upgrade');
-        const up = upgradeData.find(u => u.id === upId);
-        const cost = getUpgradeCost(upId);
-        btn.innerText = `購入 (${Math.floor(cost)} G)`;
+        const up = employeeData.find(u => u.id === upId);
+        const cost = getEmployeeCost(upId);
+        btn.innerText = `雇用・研修 (${Math.floor(cost)} G)`;
         btn.disabled = state.resources.gold < cost;
     });
 }
@@ -281,39 +279,41 @@ function sellWeapon(id) {
     }
 }
 
-// 強化ロジック
-function getUpgradeCost(id) {
-    const up = upgradeData.find(u => u.id === id);
-    const level = state.upgrades[id] || 0;
-    return up.baseCost * Math.pow(up.factor, level);
+// 雇用ロジック
+function getEmployeeCost(id) {
+    const up = employeeData.find(u => u.id === id);
+    const level = state.employees[id] || 0;
+    // 技術研修はLv1から始まるので調整
+    const effectiveLevel = up.type === 'click' ? level - 1 : level;
+    return up.baseCost * Math.pow(up.factor, effectiveLevel);
 }
 
-function renderUpgrades() {
-    elements.upgradeList.innerHTML = '';
-    upgradeData.forEach(up => {
+function renderEmployees() {
+    elements.employeeList.innerHTML = '';
+    employeeData.forEach(up => {
         const card = document.createElement('div');
         card.className = 'upgrade-card';
-        const level = state.upgrades[up.id] || 0;
+        const level = state.employees[up.id] || 0;
         card.innerHTML = `
             <div class="upgrade-info">
-                <h3>${up.name} (Lv.${level})</h3>
+                <h3>${up.name} (${level}人/回)</h3>
                 <p class="upgrade-desc">${up.desc}</p>
             </div>
-            <button class="buy-btn" data-upgrade="${up.id}">購入</button>
+            <button class="buy-btn" data-upgrade="${up.id}">雇用・研修</button>
         `;
-        card.querySelector('.buy-btn').addEventListener('click', () => buyUpgrade(up.id));
-        elements.upgradeList.appendChild(card);
+        card.querySelector('.buy-btn').addEventListener('click', () => buyEmployee(up.id));
+        elements.employeeList.appendChild(card);
     });
 }
 
-function buyUpgrade(id) {
-    const cost = getUpgradeCost(id);
+function buyEmployee(id) {
+    const cost = getEmployeeCost(id);
     if (state.resources.gold >= cost) {
         audio.buy();
         state.resources.gold -= cost;
-        state.upgrades[id] = (state.upgrades[id] || 0) + 1;
-        addLog(`${upgradeData.find(u => u.id === id).name}を強化しました。`);
-        renderUpgrades();
+        state.employees[id] = (state.employees[id] || 0) + 1;
+        addLog(`${employeeData.find(u => u.id === id).name}を${id === 'training' ? '強化' : '雇用'}しました。`);
+        renderEmployees();
         updateUI();
         saveGame();
     }
@@ -322,18 +322,17 @@ function buyUpgrade(id) {
 // 自動生成
 function autoResourceGen() {
     let changed = false;
-    if (state.upgrades.autoMiner > 0) {
-        state.resources.iron += state.upgrades.autoMiner;
+    if (state.employees.miner > 0) {
+        state.resources.iron += state.employees.miner;
         changed = true;
     }
-    if (state.upgrades.autoLumberjack > 0) {
-        state.resources.wood += state.upgrades.autoLumberjack;
+    if (state.employees.lumberjack > 0) {
+        state.resources.wood += state.employees.lumberjack;
         changed = true;
     }
-    // マナは確率、または5秒に1回などの調整が必要だが、一旦簡易的に
-    if (state.upgrades.autoManaSearcher > 0) {
-        if (Date.now() % 5000 < 1000) { // 簡易的な5秒判定
-            state.resources.mana += state.upgrades.autoManaSearcher;
+    if (state.employees.manaSearcher > 0) {
+        if (Date.now() % 5000 < 1000) {
+            state.resources.mana += state.employees.manaSearcher;
             changed = true;
         }
     }
