@@ -55,6 +55,9 @@ const audio = {
         if (!this.ctx) {
             this.ctx = new (window.AudioContext || window.webkitAudioContext)();
         }
+        if (this.ctx.state === 'suspended') {
+            this.ctx.resume();
+        }
     },
     play(freq, type, duration, vol = 0.1) {
         this.init();
@@ -80,6 +83,64 @@ const audio = {
     buy() { this.play(523.25, 'square', 0.2, 0.03); }
 };
 
+const bgm = {
+    isPlaying: false,
+    interval: null,
+    step: 0,
+    // 中世風の旋律 (イ短調)
+    melody: [
+        220.00, 261.63, 329.63, 293.66, 261.63, 246.94, 220.00, 196.00,
+        220.00, 261.63, 293.66, 329.63, 261.63, 246.94, 220.00, 220.00
+    ],
+    toggle() {
+        const btn = document.getElementById('bgm-toggle');
+        if (this.isPlaying) {
+            this.stop();
+            btn.innerText = '🔇';
+        } else {
+            this.start();
+            btn.innerText = '🔊';
+        }
+    },
+    start() {
+        if (this.isPlaying) return;
+        audio.init();
+        this.isPlaying = true;
+        this.step = 0;
+        this.loop();
+    },
+    stop() {
+        this.isPlaying = false;
+        if (this.interval) clearTimeout(this.interval);
+    },
+    loop() {
+        if (!this.isPlaying) return;
+        
+        const freq = this.melody[this.step];
+        this.playNote(freq, 0.6);
+        
+        this.step = (this.step + 1) % this.melody.length;
+        // テンポ: 0.4秒ごとに次の音
+        this.interval = setTimeout(() => this.loop(), 400);
+    },
+    playNote(freq, duration) {
+        const osc = audio.ctx.createOscillator();
+        const gain = audio.ctx.createGain();
+        // 撥弦楽器（リュートやハープ）に近い音色を目指す
+        osc.type = 'triangle';
+        osc.frequency.setValueAtTime(freq, audio.ctx.currentTime);
+        
+        gain.gain.setValueAtTime(0, audio.ctx.currentTime);
+        gain.gain.linearRampToValueAtTime(0.04, audio.ctx.currentTime + 0.02);
+        gain.gain.exponentialRampToValueAtTime(0.0001, audio.ctx.currentTime + duration);
+        
+        osc.connect(gain);
+        gain.connect(audio.ctx.destination);
+        osc.start();
+        osc.stop(audio.ctx.currentTime + duration);
+    }
+};
+
 // 初期化
 function init() {
     loadGame();
@@ -89,11 +150,14 @@ function init() {
     renderInventory();
     renderEmployees();
     updateUI();
+
+    // BGMの切り替え
+    document.getElementById('bgm-toggle').addEventListener('click', () => bgm.toggle());
     
     // 自動生成の開始
     setInterval(autoResourceGen, 1000);
     
-    addLog("鍛冶場が稼働を開始しました。");
+    addLog("神秘の鍛冶場へようこそ。BGMをオンにできます。");
 }
 
 // タブ管理
