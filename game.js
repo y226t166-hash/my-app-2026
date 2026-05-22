@@ -20,11 +20,16 @@ let state = {
 };
 
 const recipes = [
-    { id: 'iron-dagger', name: '鉄の短剣', reqs: { iron: 5, wood: 2 }, time: 3000, basePower: 10, rarity: 'common' },
-    { id: 'longsword', name: 'ロングソード', reqs: { iron: 15, wood: 5 }, time: 8000, basePower: 25, rarity: 'common' },
-    { id: 'battle-axe', name: 'バトルアックス', reqs: { iron: 20, wood: 10 }, time: 12000, basePower: 40, rarity: 'rare' },
-    { id: 'mana-staff', name: '魔力の杖', reqs: { wood: 15, mana: 5 }, time: 15000, basePower: 35, rarity: 'rare' },
-    { id: 'excalibur', name: 'エクスカリバー', reqs: { iron: 50, mana: 20, gold: 100 }, time: 30000, basePower: 100, rarity: 'legendary' }
+    { id: 'iron-dagger', name: '鉄の短剣', type: 'weapon', reqs: { iron: 5, wood: 2 }, time: 3000, basePower: 10, rarity: 'common' },
+    { id: 'longsword', name: 'ロングソード', type: 'weapon', reqs: { iron: 15, wood: 5 }, time: 8000, basePower: 25, rarity: 'common' },
+    { id: 'iron-shield', name: '鉄の盾', type: 'shield', reqs: { iron: 12, wood: 3 }, time: 6000, basePower: 15, rarity: 'common' },
+    { id: 'iron-armor', name: '鉄の鎧', type: 'armor', reqs: { iron: 25 }, time: 10000, basePower: 30, rarity: 'common' },
+    { id: 'battle-axe', name: 'バトルアックス', type: 'weapon', reqs: { iron: 20, wood: 10 }, time: 12000, basePower: 40, rarity: 'rare' },
+    { id: 'great-shield', name: '大盾', type: 'shield', reqs: { iron: 30, wood: 10 }, time: 15000, basePower: 45, rarity: 'rare' },
+    { id: 'mana-staff', name: '魔力の杖', type: 'weapon', reqs: { wood: 15, mana: 5 }, time: 15000, basePower: 35, rarity: 'rare' },
+    { id: 'silver-armor', name: '銀の胸当て', type: 'armor', reqs: { iron: 20, mana: 10, gold: 50 }, time: 18000, basePower: 60, rarity: 'rare' },
+    { id: 'excalibur', name: 'エクスカリバー', type: 'weapon', reqs: { iron: 50, mana: 20, gold: 100 }, time: 30000, basePower: 100, rarity: 'legendary' },
+    { id: 'aegis', name: 'イージスの盾', type: 'shield', reqs: { iron: 40, mana: 30, gold: 120 }, time: 30000, basePower: 90, rarity: 'legendary' }
 ];
 
 const employeeData = [
@@ -204,7 +209,9 @@ function updateUI() {
     document.querySelectorAll('.craft-btn').forEach(btn => {
         const recipeId = btn.getAttribute('data-recipe');
         const recipe = recipes.find(r => r.id === recipeId);
-        btn.disabled = !canCraft(recipe) || state.isCrafting;
+        const countInput = document.getElementById(`count-${recipeId}`);
+        const count = parseInt(countInput?.value) || 1;
+        btn.disabled = !canCraft(recipe, count) || state.isCrafting;
     });
 
     // 雇用ボタンの状態更新
@@ -227,9 +234,9 @@ function addLog(msg) {
 }
 
 // 鍛造ロジック
-function canCraft(recipe) {
+function canCraft(recipe, count = 1) {
     for (const [res, amt] of Object.entries(recipe.reqs)) {
-        if (state.resources[res] < amt) return false;
+        if (state.resources[res] < amt * count) return false;
     }
     return true;
 }
@@ -245,68 +252,94 @@ function renderRecipes() {
                 return `${amt} ${name}`;
             })
             .join(', ');
+        
+        const typeEmoji = recipe.type === 'weapon' ? '⚔️' : recipe.type === 'shield' ? '🛡️' : '🛡️';
+        
         card.innerHTML = `
             <div class="recipe-info">
-                <h3>${recipe.name}</h3>
+                <h3>${typeEmoji} ${recipe.name}</h3>
                 <p class="recipe-reqs">必要: ${reqsText}</p>
             </div>
-            <button class="craft-btn" data-recipe="${recipe.id}">鍛造</button>
+            <div class="craft-controls">
+                <input type="number" class="craft-count" value="1" min="1" max="99" id="count-${recipe.id}">
+                <button class="craft-btn" data-recipe="${recipe.id}">鍛造</button>
+            </div>
         `;
-        card.querySelector('.craft-btn').addEventListener('click', () => startCrafting(recipe));
+        
+        const countInput = card.querySelector(`#count-${recipe.id}`);
+        const craftBtn = card.querySelector('.craft-btn');
+        
+        countInput.addEventListener('input', () => {
+            const count = parseInt(countInput.value) || 1;
+            craftBtn.disabled = !canCraft(recipe, count) || state.isCrafting;
+        });
+
+        craftBtn.addEventListener('click', () => {
+            const count = parseInt(countInput.value) || 1;
+            startCrafting(recipe, count);
+        });
+        
         elements.recipeList.appendChild(card);
     });
 }
 
-function startCrafting(recipe) {
-    if (state.isCrafting || !canCraft(recipe)) return;
+function startCrafting(recipe, count = 1) {
+    if (state.isCrafting || !canCraft(recipe, count)) return;
     audio.craft();
     for (const [res, amt] of Object.entries(recipe.reqs)) {
-        state.resources[res] -= amt;
+        state.resources[res] -= amt * count;
     }
     state.isCrafting = true;
     updateUI();
     elements.craftingStatus.classList.remove('hidden');
-    elements.craftingMsg.innerText = `${recipe.name}を鍛造中...`;
+    elements.craftingMsg.innerText = `${recipe.name} (${count}個) を鍛造中...`;
     let start = null;
     function animate(timestamp) {
         if (!start) start = timestamp;
         let progress = timestamp - start;
-        let percent = Math.min((progress / recipe.time) * 100, 100);
+        // 複数個作る場合は時間が少し増えるが、1個あたりの時間は短縮される（ボーナス）
+        const totalTime = recipe.time * (1 + (count - 1) * 0.2);
+        let percent = Math.min((progress / totalTime) * 100, 100);
         elements.progressBar.style.width = percent + '%';
-        if (progress < recipe.time) {
+        if (progress < totalTime) {
             requestAnimationFrame(animate);
         } else {
-            finishCrafting(recipe);
+            finishCrafting(recipe, count);
         }
     }
     requestAnimationFrame(animate);
 }
 
-function finishCrafting(recipe) {
+function finishCrafting(recipe, count = 1) {
     audio.finish();
     state.isCrafting = false;
     elements.craftingStatus.classList.add('hidden');
     elements.progressBar.style.width = '0%';
-    const variance = Math.floor(Math.random() * 11) - 5;
-    const finalPower = recipe.basePower + variance;
-    let rarity = recipe.rarity;
-    const roll = Math.random();
-    if (roll > 0.95) rarity = 'legendary';
-    else if (roll > 0.85) rarity = 'epic';
-    else if (roll > 0.70 && rarity === 'common') rarity = 'rare';
 
-    const rarityJp = { common: '一般', rare: '希少', epic: '逸品', legendary: '伝説' };
-    const weapon = {
-        id: Date.now(),
-        name: recipe.name,
-        power: finalPower,
-        rarity: rarity,
-        rarityName: rarityJp[rarity],
-        value: Math.floor(finalPower * 1.5)
-    };
-    state.inventory.push(weapon);
-    state.stats.totalCrafted++;
-    addLog(`「${weapon.rarityName}の${weapon.name}」を鍛え上げました！（威力: ${weapon.power}）`);
+    for (let i = 0; i < count; i++) {
+        const variance = Math.floor(Math.random() * 11) - 5;
+        const finalPower = recipe.basePower + variance;
+        let rarity = recipe.rarity;
+        const roll = Math.random();
+        if (roll > 0.95) rarity = 'legendary';
+        else if (roll > 0.85) rarity = 'epic';
+        else if (roll > 0.70 && rarity === 'common') rarity = 'rare';
+
+        const rarityJp = { common: '一般', rare: '希少', epic: '逸品', legendary: '伝説' };
+        const item = {
+            id: Date.now() + i,
+            name: recipe.name,
+            type: recipe.type,
+            power: finalPower,
+            rarity: rarity,
+            rarityName: rarityJp[rarity],
+            value: Math.floor(finalPower * 1.5)
+        };
+        state.inventory.push(item);
+        state.stats.totalCrafted++;
+    }
+    
+    addLog(`「${recipe.name}」を${count}個鍛え上げました！`);
     renderInventory();
     updateUI();
     saveGame();
@@ -315,28 +348,31 @@ function finishCrafting(recipe) {
 // インベントリロジック
 function renderInventory() {
     elements.inventoryGrid.innerHTML = '';
-    state.inventory.slice().reverse().forEach(weapon => {
+    state.inventory.slice().reverse().forEach(item => {
         const card = document.createElement('div');
-        card.className = `weapon-card ${weapon.rarity}`;
+        card.className = `weapon-card ${item.rarity}`;
+        const typeEmoji = item.type === 'weapon' ? '⚔️' : item.type === 'shield' ? '🛡️' : '🛡️';
+        const powerLabel = item.type === 'weapon' ? '攻撃' : '防御';
+        
         card.innerHTML = `
-            <div class="weapon-name">${weapon.name}</div>
-            <div class="weapon-power">威力: ${weapon.power}</div>
-            <div class="weapon-rarity" style="font-size: 0.7rem; color: var(--rarity-${weapon.rarity})">${weapon.rarityName}</div>
-            <button class="sell-btn">売却 (${weapon.value} G)</button>
+            <div class="weapon-name">${typeEmoji} ${item.name}</div>
+            <div class="weapon-power">${powerLabel}: ${item.power}</div>
+            <div class="weapon-rarity" style="font-size: 0.7rem; color: var(--rarity-${item.rarity})">${item.rarityName}</div>
+            <button class="sell-btn">売却 (${item.value} G)</button>
         `;
-        card.querySelector('.sell-btn').addEventListener('click', () => sellWeapon(weapon.id));
+        card.querySelector('.sell-btn').addEventListener('click', () => sellItem(item.id));
         elements.inventoryGrid.appendChild(card);
     });
 }
 
-function sellWeapon(id) {
+function sellItem(id) {
     const index = state.inventory.findIndex(w => w.id === id);
     if (index !== -1) {
         audio.sell();
-        const weapon = state.inventory[index];
-        state.resources.gold += weapon.value;
+        const item = state.inventory[index];
+        state.resources.gold += item.value;
         state.inventory.splice(index, 1);
-        addLog(`「${weapon.name}」を売却して ${weapon.value} G 獲得しました。`);
+        addLog(`「${item.name}」を売却して ${item.value} G 獲得しました。`);
         renderInventory();
         updateUI();
         saveGame();

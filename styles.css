@@ -250,9 +250,20 @@ main {
     color: var(--accent-color);
 }
 
-.recipe-reqs {
-    font-size: 0.9rem;
-    color: #aaa;
+.craft-controls {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.craft-count {
+    width: 60px;
+    background: rgba(255, 255, 255, 0.1);
+    border: 1px solid var(--border-color);
+    color: var(--text-color);
+    padding: 6px;
+    border-radius: 4px;
+    text-align: center;
 }
 
 .craft-btn {
