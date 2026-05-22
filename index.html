@@ -11,7 +11,11 @@
     <div id="app">
         <header>
             <div class="header-top">
-                <h1>神秘の鍛冶場</h1>
+                <div class="shop-title-container">
+                    <span id="shop-name-display">神秘の鍛冶場</span>
+                    <input type="text" id="shop-name-input" value="神秘の鍛冶場" class="hidden">
+                    <button id="edit-shop-name" class="small-btn">店名変更</button>
+                </div>
                 <button id="bgm-toggle" class="icon-btn" title="BGM 切替">🔇</button>
             </div>
             <div id="resources" class="resource-bar">
@@ -25,6 +29,7 @@
         <nav>
             <button class="nav-btn active" data-tab="gather">収集</button>
             <button class="nav-btn" data-tab="forge">鍛造</button>
+            <button class="nav-btn" data-tab="shop">店先</button>
             <button class="nav-btn" data-tab="inventory">倉庫</button>
             <button class="nav-btn" data-tab="employees">雇用</button>
             <button class="nav-btn" data-tab="quests">依頼</button>
@@ -60,7 +65,26 @@
                 </div>
             </section>
 
+            <section id="shop" class="tab-content">
+                <div class="shop-header">
+                    <h2>陳列棚</h2>
+                    <p class="shop-status">状態: <span id="shop-status-text" class="status-open">営業中</span></p>
+                </div>
+                <div id="shop-shelf" class="inventory-grid">
+                    <!-- 陳列された商品がここに表示されます -->
+                    <p class="empty-msg">棚には何も並んでいません。倉庫から商品を並べましょう。</p>
+                </div>
+                <div class="shop-log-container">
+                    <h3>来店履歴</h3>
+                    <div id="shop-log" class="game-log scrollable"></div>
+                </div>
+            </section>
+
             <section id="inventory" class="tab-content">
+                <div class="inventory-header">
+                    <h2>倉庫 (在庫一覧)</h2>
+                    <p id="inventory-count">在庫数: 0</p>
+                </div>
                 <div class="inventory-grid" id="inventory-grid">
                     <!-- 武器がここに挿入されます -->
                 </div>

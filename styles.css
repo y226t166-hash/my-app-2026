@@ -60,13 +60,110 @@ header {
     margin-bottom: 15px;
 }
 
-h1 {
+.shop-title-container {
+    display: flex;
+    align-items: center;
+    gap: 15px;
+}
+
+#shop-name-display {
     font-size: 1.8rem;
     text-transform: uppercase;
     letter-spacing: 4px;
     color: var(--accent-color);
     text-shadow: 0 0 10px var(--accent-glow);
-    margin: 0;
+    font-weight: bold;
+}
+
+#shop-name-input {
+    background: rgba(0,0,0,0.5);
+    border: 1px solid var(--accent-color);
+    color: var(--text-color);
+    font-size: 1.5rem;
+    padding: 5px 10px;
+    border-radius: 4px;
+    width: 250px;
+}
+
+.small-btn {
+    background: rgba(255,255,255,0.1);
+    border: 1px solid var(--border-color);
+    color: var(--text-color);
+    padding: 4px 8px;
+    font-size: 0.7rem;
+    border-radius: 4px;
+    cursor: pointer;
+}
+
+.small-btn:hover {
+    background: var(--accent-color);
+    color: black;
+}
+
+/* Shop Tab */
+.shop-header, .inventory-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 20px;
+    padding-bottom: 10px;
+    border-bottom: 1px solid rgba(255,255,255,0.1);
+}
+
+.status-open {
+    color: #4caf50;
+    font-weight: bold;
+    text-shadow: 0 0 5px rgba(76, 175, 80, 0.5);
+}
+
+.shop-log-container {
+    margin-top: 30px;
+}
+
+.shop-log-container h3 {
+    font-size: 1rem;
+    margin-bottom: 10px;
+    color: #aaa;
+}
+
+.scrollable {
+    max-height: 150px;
+    overflow-y: auto;
+}
+
+.empty-msg {
+    grid-column: 1 / -1;
+    text-align: center;
+    padding: 40px;
+    color: #666;
+    font-style: italic;
+}
+
+.list-on-shelf-btn {
+    background: #4caf50;
+    color: black;
+    border: none;
+    padding: 4px 8px;
+    border-radius: 4px;
+    margin-top: 10px;
+    width: 100%;
+    font-weight: bold;
+    cursor: pointer;
+}
+
+.list-on-shelf-btn:hover {
+    background: #8bc34a;
+}
+
+.return-to-wh-btn {
+    background: #f44336;
+    color: white;
+    border: none;
+    padding: 4px 8px;
+    border-radius: 4px;
+    margin-top: 10px;
+    width: 100%;
+    cursor: pointer;
 }
 
 .icon-btn {

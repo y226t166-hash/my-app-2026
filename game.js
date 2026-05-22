@@ -13,6 +13,8 @@ let state = {
         manaSearcher: 0
     },
     inventory: [],
+    shopShelf: [], // 陳列棚の商品
+    shopName: "神秘の鍛冶場",
     isCrafting: false,
     currentQuestIndex: 0,
     questCompleted: false,
@@ -20,6 +22,130 @@ let state = {
         totalCrafted: 0
     }
 };
+
+const shopManager = {
+    renderShelf() {
+        const shelf = document.getElementById('shop-shelf');
+        if (!shelf) return;
+        shelf.innerHTML = '';
+        
+        if (state.shopShelf.length === 0) {
+            shelf.innerHTML = '<p class="empty-msg">棚には何も並んでいません。倉庫から商品を並べましょう。</p>';
+            return;
+        }
+
+        state.shopShelf.forEach(item => {
+            const card = document.createElement('div');
+            card.className = `weapon-card ${item.rarity}`;
+            const typeEmoji = item.type === 'weapon' ? '⚔️' : item.type === 'shield' ? '🛡️' : '🛡️';
+            const powerLabel = item.type === 'weapon' ? '攻撃' : '防御';
+            
+            // 店頭価格は倉庫での即時売却より高い (威力 * 2.5)
+            const shelfValue = Math.floor(item.power * 2.5);
+            
+            card.innerHTML = `
+                <div class="weapon-name">${typeEmoji} ${item.name}</div>
+                <div class="weapon-power">${powerLabel}: ${item.power}</div>
+                <div class="weapon-rarity" style="font-size: 0.7rem; color: var(--rarity-${item.rarity})">${item.rarityName}</div>
+                <div class="shelf-price" style="margin-top:5px; font-weight:bold; color: gold;">${shelfValue} G</div>
+                <button class="return-to-wh-btn">倉庫へ戻す</button>
+            `;
+            card.querySelector('.return-to-wh-btn').addEventListener('click', () => this.returnToWarehouse(item.id));
+            shelf.appendChild(card);
+        });
+    },
+
+    listOnShelf(id) {
+        if (state.shopShelf.length >= 8) {
+            addLog("陳列棚がいっぱいです。");
+            return;
+        }
+        const index = state.inventory.findIndex(item => item.id === id);
+        if (index !== -1) {
+            const item = state.inventory.splice(index, 1)[0];
+            state.shopShelf.push(item);
+            addLog(`「${item.name}」を棚に並べました。`);
+            renderInventory();
+            this.renderShelf();
+            saveGame();
+        }
+    },
+
+    returnToWarehouse(id) {
+        const index = state.shopShelf.findIndex(item => item.id === id);
+        if (index !== -1) {
+            const item = state.shopShelf.splice(index, 1)[0];
+            state.inventory.push(item);
+            this.renderShelf();
+            renderInventory();
+            saveGame();
+        }
+    },
+
+    customerLoop() {
+        if (state.shopShelf.length > 0) {
+            // 来客チャンス (20%の確率で売れる)
+            if (Math.random() > 0.8) {
+                this.sellRandomItem();
+            }
+        }
+    },
+
+    sellRandomItem() {
+        const randomIndex = Math.floor(Math.random() * state.shopShelf.length);
+        const item = state.shopShelf.splice(randomIndex, 1)[0];
+        const value = Math.floor(item.power * 2.5);
+        state.resources.gold += value;
+        
+        const customers = ["旅の戦士", "新人冒険者", "街の守備兵", "腕利きの傭兵", "宮廷魔術師", "流浪の騎士"];
+        const customer = customers[Math.floor(Math.random() * customers.length)];
+        
+        const logMsg = `${customer}が「${item.name}」を ${value} G で購入していきました。`;
+        this.addShopLog(logMsg);
+        addLog(logMsg);
+        
+        this.renderShelf();
+        updateUI();
+        saveGame();
+    },
+
+    addShopLog(msg) {
+        const logEl = document.getElementById('shop-log');
+        if (!logEl) return;
+        const p = document.createElement('p');
+        p.innerText = `[${new Date().toLocaleTimeString()}] ${msg}`;
+        logEl.prepend(p);
+        if (logEl.childNodes.length > 20) logEl.removeChild(logEl.lastChild);
+    },
+
+    setupNameEditing() {
+        const display = document.getElementById('shop-name-display');
+        const input = document.getElementById('shop-name-input');
+        const btn = document.getElementById('edit-shop-name');
+        
+        if (!display || !input || !btn) return;
+        
+        btn.addEventListener('click', () => {
+            if (input.classList.contains('hidden')) {
+                input.value = state.shopName;
+                input.classList.remove('hidden');
+                display.classList.add('hidden');
+                btn.innerText = "保存";
+            } else {
+                state.shopName = input.value || "神秘の鍛冶場";
+                display.innerText = state.shopName;
+                input.classList.add('hidden');
+                display.classList.remove('hidden');
+                btn.innerText = "店名変更";
+                saveGame();
+            }
+        });
+        
+        display.innerText = state.shopName;
+    }
+};
+
+// ... (rest of the code)
 
 const quests = [
     {
@@ -329,13 +455,18 @@ function init() {
     renderInventory();
     renderEmployees();
     questManager.render();
+    shopManager.renderShelf();
+    shopManager.setupNameEditing();
     updateUI();
 
     // BGMの切り替え
     document.getElementById('bgm-toggle').addEventListener('click', () => bgm.toggle());
     
-    // 自動生成の開始
-    setInterval(autoResourceGen, 1000);
+    // 自動生成 & 来客ループ
+    setInterval(() => {
+        autoResourceGen();
+        shopManager.customerLoop();
+    }, 1000);
     
     addLog("神秘の鍛冶場へようこそ。BGMをオンにできます。");
 }
@@ -353,6 +484,9 @@ function setupTabs() {
             
             if (tabId === 'quests') {
                 questManager.render();
+            }
+            if (tabId === 'shop') {
+                shopManager.renderShelf();
             }
         });
     });
@@ -384,6 +518,9 @@ function updateUI() {
     elements.wood.innerText = state.resources.wood;
     elements.mana.innerText = state.resources.mana;
     
+    const invCount = document.getElementById('inventory-count');
+    if (invCount) invCount.innerText = `在庫数: ${state.inventory.length}`;
+
     // 鍛造ボタンの状態更新
     document.querySelectorAll('.craft-btn').forEach(btn => {
         const recipeId = btn.getAttribute('data-recipe');
@@ -402,9 +539,12 @@ function updateUI() {
         btn.disabled = state.resources.gold < cost;
     });
 
-    // クエスト表示の更新
+    // クエスト/店先表示の更新
     if (document.getElementById('quests').classList.contains('active')) {
         questManager.render();
+    }
+    if (document.getElementById('shop').classList.contains('active')) {
+        shopManager.renderShelf();
     }
 }
 
@@ -542,8 +682,10 @@ function renderInventory() {
             <div class="weapon-name">${typeEmoji} ${item.name}</div>
             <div class="weapon-power">${powerLabel}: ${item.power}</div>
             <div class="weapon-rarity" style="font-size: 0.7rem; color: var(--rarity-${item.rarity})">${item.rarityName}</div>
-            <button class="sell-btn">売却 (${item.value} G)</button>
+            <button class="list-on-shelf-btn">棚に並べる</button>
+            <button class="sell-btn">即時売却 (${item.value} G)</button>
         `;
+        card.querySelector('.list-on-shelf-btn').addEventListener('click', () => shopManager.listOnShelf(item.id));
         card.querySelector('.sell-btn').addEventListener('click', () => sellItem(item.id));
         elements.inventoryGrid.appendChild(card);
     });
@@ -628,6 +770,7 @@ function autoResourceGen() {
 }
 
 // 保存
+// 保存/読込
 function saveGame() {
     localStorage.setItem('arcaneForgeSave_Clicker_v2', JSON.stringify(state));
 }
@@ -636,13 +779,14 @@ function loadGame() {
     const saved = localStorage.getItem('arcaneForgeSave_Clicker_v2');
     if (saved) {
         const loadedState = JSON.parse(saved);
-        // 新しい構造（employeesなど）が不足している場合の補完
         state = {
             ...state,
             ...loadedState,
             resources: { ...state.resources, ...loadedState.resources },
             employees: { ...state.employees, ...loadedState.employees },
             inventory: loadedState.inventory || [],
+            shopShelf: loadedState.shopShelf || [],
+            shopName: loadedState.shopName || "神秘の鍛冶場",
             stats: { ...state.stats, ...loadedState.stats }
         };
         state.isCrafting = false;
