@@ -488,6 +488,9 @@ function setupTabs() {
             if (tabId === 'shop') {
                 shopManager.renderShelf();
             }
+            if (tabId === 'inventory') {
+                renderInventory();
+            }
         });
     });
 }
