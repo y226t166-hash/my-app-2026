@@ -340,7 +340,6 @@ main {
     background: #444;
     cursor: not-allowed;
 }
-
 /* Inventory */
 .inventory-grid {
     display: grid;
@@ -348,6 +347,136 @@ main {
     gap: 15px;
 }
 
+/* Quest System */
+.quest-container {
+    margin-bottom: 30px;
+}
+
+.quest-card {
+    background: rgba(0,0,0,0.4);
+    border: 2px solid var(--mana-color);
+    padding: 20px;
+    border-radius: 12px;
+    box-shadow: 0 0 15px var(--mana-glow);
+}
+
+.quest-card h3 {
+    color: var(--mana-color);
+    margin-bottom: 10px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.quest-desc {
+    margin-bottom: 15px;
+    line-height: 1.4;
+}
+
+.quest-requirements {
+    background: rgba(255,255,255,0.05);
+    padding: 10px;
+    border-radius: 6px;
+    margin-bottom: 15px;
+}
+
+.quest-req-item {
+    display: flex;
+    justify-content: space-between;
+    font-size: 0.9rem;
+    margin-bottom: 5px;
+}
+
+.quest-req-item.met {
+    color: #4caf50;
+}
+
+.quest-footer {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.complete-btn {
+    background: var(--mana-color);
+    color: black;
+    border: none;
+    padding: 10px 20px;
+    border-radius: 6px;
+    font-weight: bold;
+    cursor: pointer;
+}
+
+.complete-btn:disabled {
+    background: #444;
+    cursor: not-allowed;
+}
+
+.quest-progress {
+    text-align: center;
+    border-top: 1px solid var(--border-color);
+    padding-top: 20px;
+}
+
+.quest-progress h3 {
+    margin-bottom: 10px;
+    font-size: 1rem;
+}
+
+#quest-total-progress {
+    height: 100%;
+    background: linear-gradient(90deg, #4caf50, #8bc34a);
+    box-shadow: 0 0 10px rgba(76, 175, 80, 0.5);
+    transition: width 0.5s ease;
+}
+
+#quest-rank-text {
+    margin-top: 10px;
+    font-weight: bold;
+    color: var(--mana-color);
+}
+
+.victory-screen {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0,0,0,0.9);
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    z-index: 1000;
+    text-align: center;
+    padding: 20px;
+    animation: fadeIn 1s;
+}
+
+.victory-content h2 {
+    font-size: 3rem;
+    color: var(--accent-color);
+    margin-bottom: 20px;
+}
+
+.victory-content p {
+    font-size: 1.2rem;
+    margin-bottom: 30px;
+    max-width: 600px;
+}
+
+.restart-btn {
+    background: var(--accent-color);
+    color: black;
+    border: none;
+    padding: 15px 40px;
+    border-radius: 8px;
+    font-size: 1.2rem;
+    font-weight: bold;
+    cursor: pointer;
+}
+
+/* Footer */
 .weapon-card {
     background: rgba(0,0,0,0.4);
     border: 1px solid var(--border-color);

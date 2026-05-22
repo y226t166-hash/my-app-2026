@@ -14,12 +14,72 @@ let state = {
     },
     inventory: [],
     isCrafting: false,
+    currentQuestIndex: 0,
+    questCompleted: false,
     stats: {
         totalCrafted: 0
     }
 };
 
+const quests = [
+    {
+        id: 'start',
+        title: '新米鍛冶屋の初仕事',
+        client: '村の自警団',
+        desc: 'まずは基本の武器「鉄の短剣」を3本用意してくれ。自警団の新人に配るんだ。',
+        reqs: [{ type: 'iron-dagger', count: 3 }],
+        reward: 50,
+        rank: '見習い鍛冶屋'
+    },
+    {
+        id: 'guard-upgrade',
+        title: '守りを固めよ',
+        client: '守備隊長',
+        desc: '最近魔物が増えてきた。新調した「鉄の盾」を5枚、大至急届けてほしい。',
+        reqs: [{ type: 'iron-shield', count: 5 }],
+        reward: 150,
+        rank: '街の鍛冶屋'
+    },
+    {
+        id: 'adventurer-set',
+        title: '冒険者への支援',
+        client: '冒険者ギルド',
+        desc: '期待の新鋭パーティに「ロングソード」2本と「鉄の鎧」2領を提供してくれ。',
+        reqs: [
+            { type: 'longsword', count: 2 },
+            { type: 'iron-armor', count: 2 }
+        ],
+        reward: 400,
+        rank: '熟練の鍛冶師'
+    },
+    {
+        id: 'magic-order',
+        title: '魔法学園の依頼',
+        client: '学園長',
+        desc: '魔力を持つ生徒たちのために「魔力の杖」3本と「銀の胸当て」2領を頼む。',
+        reqs: [
+            { type: 'mana-staff', count: 3 },
+            { type: 'silver-armor', count: 2 }
+        ],
+        reward: 1200,
+        rank: '宮廷鍛冶師'
+    },
+    {
+        id: 'hero-request',
+        title: '【最終依頼】伝説をその手に',
+        client: '王国騎士団',
+        desc: '魔王軍との最終決戦が始まる。伝説の武具「エクスカリバー」と「イージスの盾」を鍛え上げ、勝利を掴み取れ！',
+        reqs: [
+            { type: 'excalibur', count: 1 },
+            { type: 'aegis', count: 1 }
+        ],
+        reward: 5000,
+        rank: '伝説の鍛冶聖'
+    }
+];
+
 const recipes = [
+// ... (rest of the file follows)
     { id: 'iron-dagger', name: '鉄の短剣', type: 'weapon', reqs: { iron: 5, wood: 2 }, time: 3000, basePower: 10, rarity: 'common' },
     { id: 'longsword', name: 'ロングソード', type: 'weapon', reqs: { iron: 15, wood: 5 }, time: 8000, basePower: 25, rarity: 'common' },
     { id: 'iron-shield', name: '鉄の盾', type: 'shield', reqs: { iron: 12, wood: 3 }, time: 6000, basePower: 15, rarity: 'common' },
@@ -146,6 +206,120 @@ const bgm = {
     }
 };
 
+const questManager = {
+    render() {
+        const container = document.getElementById('current-quest');
+        if (!container) return;
+        
+        if (state.currentQuestIndex >= quests.length) {
+            container.innerHTML = `
+                <div class="quest-card">
+                    <h3>🏆 全ての依頼を達成しました！</h3>
+                    <p>あなたは伝説の鍛冶聖として語り継がれるでしょう。</p>
+                </div>
+            `;
+            return;
+        }
+
+        const quest = quests[state.currentQuestIndex];
+        const reqsHtml = quest.reqs.map(req => {
+            const recipe = recipes.find(r => r.id === req.type);
+            const currentCount = state.inventory.filter(item => item.name === recipe.name).length;
+            const met = currentCount >= req.count;
+            return `
+                <div class="quest-req-item ${met ? 'met' : ''}">
+                    <span>${recipe.name}</span>
+                    <span>${currentCount} / ${req.count}</span>
+                </div>
+            `;
+        }).join('');
+
+        const canComplete = this.canComplete(quest);
+
+        container.innerHTML = `
+            <div class="quest-card">
+                <h3>📜 ${quest.title}</h3>
+                <p class="quest-desc"><strong>依頼主: ${quest.client}</strong><br>${quest.desc}</p>
+                <div class="quest-requirements">
+                    <p style="font-size: 0.8rem; margin-bottom: 10px; opacity: 0.8;">納品が必要なアイテム:</p>
+                    ${reqsHtml}
+                </div>
+                <div class="quest-footer">
+                    <span>報酬: <span style="color: gold;">💰 ${quest.reward} G</span></span>
+                    <button class="complete-btn" ${canComplete ? '' : 'disabled'}>納品する</button>
+                </div>
+            </div>
+        `;
+
+        container.querySelector('.complete-btn')?.addEventListener('click', () => this.complete(quest));
+        this.updateProgress();
+    },
+
+    canComplete(quest) {
+        return quest.reqs.every(req => {
+            const recipe = recipes.find(r => r.id === req.type);
+            const currentCount = state.inventory.filter(item => item.name === recipe.name).length;
+            return currentCount >= req.count;
+        });
+    },
+
+    complete(quest) {
+        if (!this.canComplete(quest)) return;
+
+        audio.buy(); // 完了音
+        quest.reqs.forEach(req => {
+            const recipe = recipes.find(r => r.id === req.type);
+            for (let i = 0; i < req.count; i++) {
+                const index = state.inventory.findIndex(item => item.name === recipe.name);
+                if (index !== -1) state.inventory.splice(index, 1);
+            }
+        });
+
+        state.resources.gold += quest.reward;
+        state.currentQuestIndex++;
+        
+        addLog(`依頼「${quest.title}」を達成し、${quest.reward} G を獲得しました。`);
+        
+        if (state.currentQuestIndex >= quests.length) {
+            this.showVictory();
+        }
+
+        renderInventory();
+        this.render();
+        updateUI();
+        saveGame();
+    },
+
+    updateProgress() {
+        const progressEl = document.getElementById('quest-total-progress');
+        const rankEl = document.getElementById('quest-rank-text');
+        if (!progressEl || !rankEl) return;
+
+        const progressPercent = (state.currentQuestIndex / quests.length) * 100;
+        progressEl.style.width = progressPercent + '%';
+        
+        const currentRank = state.currentQuestIndex > 0 ? quests[state.currentQuestIndex - 1].rank : '新米鍛冶屋';
+        rankEl.innerText = `現在の称号: ${currentRank}`;
+    },
+
+    showVictory() {
+        const victory = document.createElement('div');
+        victory.className = 'victory-screen';
+        victory.innerHTML = `
+            <div class="victory-content">
+                <h2>全依頼達成！</h2>
+                <p>あなたは王国一の鍛冶聖となり、世界に平和をもたらしました。<br>その伝説は永遠に語り継がれることでしょう。</p>
+                <button class="restart-btn">鍛冶を続ける</button>
+            </div>
+        `;
+        victory.querySelector('.restart-btn').addEventListener('click', () => {
+            victory.remove();
+        });
+        document.body.appendChild(victory);
+        audio.finish();
+    }
+};
+
 // 初期化
 function init() {
     loadGame();
@@ -154,6 +328,7 @@ function init() {
     renderRecipes();
     renderInventory();
     renderEmployees();
+    questManager.render();
     updateUI();
 
     // BGMの切り替え
@@ -175,6 +350,10 @@ function setupTabs() {
             btn.classList.add('active');
             document.querySelectorAll('.tab-content').forEach(content => content.classList.remove('active'));
             document.getElementById(tabId).classList.add('active');
+            
+            if (tabId === 'quests') {
+                questManager.render();
+            }
         });
     });
 }
@@ -222,6 +401,11 @@ function updateUI() {
         btn.innerText = `雇用・研修 (${Math.floor(cost)} G)`;
         btn.disabled = state.resources.gold < cost;
     });
+
+    // クエスト表示の更新
+    if (document.getElementById('quests').classList.contains('active')) {
+        questManager.render();
+    }
 }
 
 function addLog(msg) {
